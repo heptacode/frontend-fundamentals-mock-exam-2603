@@ -1,10 +1,12 @@
 import { css } from '@emotion/react';
-import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Top, Spacing, Border, Button, Text, ListRow } from '_tosslib/components';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Border, Button, ListRow, Spacing, Text, Top } from '_tosslib/components';
 import { colors } from '_tosslib/constants/colors';
-import { getRooms, getReservations, getMyReservations, cancelReservation } from 'pages/remotes';
+import { DateInput } from 'components/DateInput';
+import { cancelReservation, getMyReservations, getReservations, getRooms } from 'pages/remotes';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { StringParam, useQueryParam, withDefault } from 'use-query-params';
 
 const EQUIPMENT_LABELS: Record<string, string> = {
   tv: 'TV',
@@ -42,7 +44,7 @@ export function ReservationStatusPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const [date, setDate] = useState(formatDate(new Date()));
+  const [date, setDate] = useQueryParam('date', withDefault(StringParam, formatDate(new Date())));
 
   const locationState = location.state as { message?: string } | null;
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
@@ -112,39 +114,7 @@ export function ReservationStatusPage() {
           날짜 선택
         </Text>
         <Spacing size={16} />
-        <div
-          css={css`
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-          `}
-        >
-          <input
-            type="date"
-            value={date}
-            min={formatDate(new Date())}
-            onChange={e => setDate(e.target.value)}
-            aria-label="날짜"
-            css={css`
-              box-sizing: border-box;
-              font-size: 16px;
-              font-weight: 500;
-              line-height: 1.5;
-              height: 48px;
-              background-color: ${colors.grey50};
-              border-radius: 12px;
-              color: ${colors.grey800};
-              width: 100%;
-              border: 1px solid ${colors.grey200};
-              padding: 0 16px;
-              outline: none;
-              transition: border-color 0.15s;
-              &:focus {
-                border-color: ${colors.blue500};
-              }
-            `}
-          />
-        </div>
+        <DateInput value={date} min={formatDate(new Date())} onChange={e => setDate(e.target.value)} />
       </div>
 
       <Spacing size={24} />
