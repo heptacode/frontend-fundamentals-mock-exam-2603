@@ -4494,6 +4494,11 @@ semver@^7.2.1, semver@^7.3.7, semver@^7.5.3:
   resolved "https://registry.yarnpkg.com/semver/-/semver-7.7.4.tgz#28464e36060e991fa7a11d0279d2d3f3b57a7e8a"
   integrity sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==
 
+serialize-query-params@^2.0.3:
+  version "2.0.4"
+  resolved "https://registry.yarnpkg.com/serialize-query-params/-/serialize-query-params-2.0.4.tgz#288e86ecd3db84a4525d8d828c38227c946bf0d8"
+  integrity sha512-y9WzzDj3BsGgKLCh0ugiinufS//YqOfao/yVJjkXA4VLuyNCfHOLU/cbulGPxs3aeCqhvROw7qPL04JSZnCo0w==
+
 set-cookie-parser@^2.4.6:
   version "2.7.2"
   resolved "https://registry.yarnpkg.com/set-cookie-parser/-/set-cookie-parser-2.7.2.tgz#ccd08673a9ae5d2e44ea2a2de25089e67c7edf68"
@@ -5035,6 +5040,13 @@ uri-js@^4.2.2:
   integrity sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==
   dependencies:
     punycode "^2.1.0"
+
+use-query-params@^2.2.2:
+  version "2.2.2"
+  resolved "https://registry.yarnpkg.com/use-query-params/-/use-query-params-2.2.2.tgz#a029b00b24a680ceffea1e3ae0ce8ac9c5c77645"
+  integrity sha512-OwGab8u8/x2xZp9uSyBsx0kXlkR9IR436zbygsYVGikPYY3OJosvve6IJVGwIJPcfyb/YHwvPrUNu65/JR++Kw==
+  dependencies:
+    serialize-query-params "^2.0.3"
 
 use-sync-external-store@^1.6.0:
   version "1.6.0"
