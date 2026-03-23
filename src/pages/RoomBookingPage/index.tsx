@@ -2,29 +2,14 @@ import { css } from '@emotion/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Border, Button, ListRow, Select, Spacing, Text, Top } from '_tosslib/components';
 import { colors } from '_tosslib/constants/colors';
+import type { Equipment, Reservation } from '_tosslib/server/types';
 import axios from 'axios';
+import { ALL_EQUIPMENT, EQUIPMENT_LABELS, TIME_SLOTS } from 'utils/constants';
 import { createReservation, getReservations, getRooms } from 'pages/remotes';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrayParam, NumberParam, StringParam, useQueryParams, withDefault } from 'use-query-params';
 import { formatDate } from 'utils/date';
-
-const EQUIPMENT_LABELS: Record<string, string> = {
-  tv: 'TV',
-  whiteboard: '화이트보드',
-  video: '화상장비',
-  speaker: '스피커',
-};
-
-const ALL_EQUIPMENT = ['tv', 'whiteboard', 'video', 'speaker'];
-
-const TIME_SLOTS: string[] = [];
-for (let h = 9; h <= 20; h++) {
-  TIME_SLOTS.push(`${String(h).padStart(2, '0')}:00`);
-  if (h < 20) {
-    TIME_SLOTS.push(`${String(h).padStart(2, '0')}:30`);
-  }
-}
 
 export function RoomBookingPage() {
   const navigate = useNavigate();
@@ -49,16 +34,12 @@ export function RoomBookingPage() {
     enabled: !!date,
   });
 
-  const createMutation = useMutation(
-    (data: { roomId: string; date: string; start: string; end: string; attendees: number; equipment: string[] }) =>
-      createReservation(data),
-    {
-      onSuccess: (_data, variables) => {
-        queryClient.invalidateQueries({ queryKey: ['reservations', variables.date] });
-        queryClient.invalidateQueries({ queryKey: ['myReservations'] });
-      },
-    }
-  );
+  const createMutation = useMutation((data: Omit<Reservation, 'id'>) => createReservation(data), {
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['reservations', variables.date] });
+      queryClient.invalidateQueries({ queryKey: ['myReservations'] });
+    },
+  });
 
   // 필터 변경 시 선택 초기화
   const handleFilterChange = () => {
@@ -117,7 +98,7 @@ export function RoomBookingPage() {
         start: startTime,
         end: endTime,
         attendees,
-        equipment: equipment.filter((e): e is string => e !== null) as string[],
+        equipment: equipment.filter((e): e is Equipment => e !== null) as Equipment[],
       });
 
       if ('ok' in result && result.ok) {
