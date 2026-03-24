@@ -3,7 +3,7 @@ import { Spacing, Text } from '_tosslib/components';
 import { colors } from '_tosslib/constants/colors';
 
 interface SectionProps {
-  title: React.ReactNode;
+  title?: React.ReactNode;
   subtitle?: React.ReactNode;
   children: React.ReactNode;
 }

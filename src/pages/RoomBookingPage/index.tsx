@@ -1,107 +1,108 @@
 import { css } from '@emotion/react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Border, Button, ListRow, Select, Spacing, Text, Top } from '_tosslib/components';
 import { colors } from '_tosslib/constants/colors';
-import type { Equipment, Reservation } from '_tosslib/server/types';
+import type { Equipment } from '_tosslib/server/types';
 import axios from 'axios';
 import { ALL_EQUIPMENT, EQUIPMENT_LABELS, TIME_SLOTS } from 'utils/constants';
-import { createReservation, getReservations, getRooms } from 'pages/remotes';
+import { createReservation, getMyReservations, getReservations, getRooms } from 'pages/remotes';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrayParam, NumberParam, StringParam, useQueryParams, withDefault } from 'use-query-params';
+import {
+  ArrayParam,
+  createEnumArrayParam,
+  NumberParam,
+  StringParam,
+  useQueryParams,
+  withDefault,
+} from 'use-query-params';
 import { formatDate } from 'utils/date';
+import { useLoading } from 'hooks/useLoading';
+import { Section } from 'components/Section';
+import { Banner } from 'components/Banner';
+import { filterAvailableRooms, getUniqueFloors } from 'utils/roomFilters';
+import { AvailableRooms } from './AvailableRooms';
+import { Chip } from 'components/Chip';
 
 export function RoomBookingPage() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
-  const [{ date, startTime, endTime, attendees, equipment, floor: preferredFloor, selectedRoomId }, setParams] =
-    useQueryParams({
+  const [{ date, start, end, attendees, equipment, floor: preferredFloor, selectedRoomId }, setParams] = useQueryParams(
+    {
       date: withDefault(StringParam, formatDate(new Date())),
-      startTime: withDefault(StringParam, ''),
-      endTime: withDefault(StringParam, ''),
+      start: withDefault(StringParam, ''),
+      end: withDefault(StringParam, ''),
       attendees: withDefault(NumberParam, 1),
-      equipment: withDefault(ArrayParam, [] as string[]),
+      equipment: withDefault(
+        createEnumArrayParam<Equipment>(Object.keys(EQUIPMENT_LABELS) as Equipment[]),
+        [] as Equipment[]
+      ),
       floor: NumberParam,
       selectedRoomId: withDefault(StringParam, ''),
-    });
+    }
+  );
+  const [isLoading, startLoading] = useLoading();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { data: rooms = [] } = useQuery({ queryKey: ['rooms'], queryFn: getRooms });
-  const { data: reservations = [] } = useQuery({
-    queryKey: ['reservations', date],
-    queryFn: () => getReservations(date),
-    enabled: !!date,
-  });
-
-  const createMutation = useMutation((data: Omit<Reservation, 'id'>) => createReservation(data), {
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['reservations', variables.date] });
-      queryClient.invalidateQueries({ queryKey: ['myReservations'] });
-    },
-  });
+  const { data: rooms = [] } = useQuery(getRooms.queryOptions());
+  const { data: reservations = [], refetch: refetchReservations } = useQuery(getReservations.queryOptions(date));
+  const { refetch: refetchMyReservations } = useQuery(getMyReservations.queryOptions());
 
   // 필터 변경 시 선택 초기화
-  const handleFilterChange = () => {
+  function handleFilterChange() {
     setParams({ selectedRoomId: '' });
     setErrorMessage(null);
-  };
+  }
 
   // 입력 검증
-  let validationError: string | null = null;
-  const hasTimeInputs = startTime !== '' && endTime !== '';
-  if (hasTimeInputs) {
-    if (endTime <= startTime) {
-      validationError = '종료 시간은 시작 시간보다 늦어야 합니다.';
-    } else if (attendees < 1) {
-      validationError = '참석 인원은 1명 이상이어야 합니다.';
-    }
-  }
-  const isFilterComplete = hasTimeInputs && !validationError;
+  const validationError = (() => {
+    if (start === '' || end === '') return null;
+    if (end <= start) return '종료 시간은 시작 시간보다 늦어야 합니다.';
+    if (attendees < 1) return '참석 인원은 1명 이상이어야 합니다.';
+    return null;
+  })();
+
+  const isFilterComplete = start !== '' && end !== '' && !validationError;
 
   // 필터링
-  const floors = [...new Set(rooms.map((r: { floor: number }) => r.floor))].sort((a: number, b: number) => a - b);
+  const floors = getUniqueFloors(rooms);
 
   const availableRooms = isFilterComplete
-    ? rooms
-        .filter((room: { id: string; capacity: number; equipment: string[]; floor: number }) => {
-          if (room.capacity < attendees) return false;
-          if (!equipment.every(eq => eq && room.equipment.includes(eq))) return false;
-          if (preferredFloor !== null && room.floor !== preferredFloor) return false;
-          const hasConflict = reservations.some(
-            (r: { roomId: string; date: string; start: string; end: string }) =>
-              r.roomId === room.id && r.date === date && r.start < endTime && r.end > startTime
-          );
-          if (hasConflict) return false;
-          return true;
-        })
-        .sort((a: { floor: number; name: string }, b: { floor: number; name: string }) => {
-          if (a.floor !== b.floor) return a.floor - b.floor;
-          return a.name.localeCompare(b.name);
-        })
+    ? filterAvailableRooms(rooms, reservations, {
+        attendees,
+        equipment,
+        preferredFloor: preferredFloor ?? null,
+        date,
+        start,
+        end,
+      })
     : [];
 
-  const handleBook = async () => {
+  async function handleBook() {
     if (!selectedRoomId) {
       setErrorMessage('회의실을 선택해주세요.');
       return;
     }
-    if (!startTime || !endTime) {
+    if (!start || !end) {
       setErrorMessage('시작 시간과 종료 시간을 선택해주세요.');
       return;
     }
 
     try {
-      const result = await createMutation.mutateAsync({
-        roomId: selectedRoomId,
-        date,
-        start: startTime,
-        end: endTime,
-        attendees,
-        equipment: equipment.filter((e): e is Equipment => e !== null) as Equipment[],
-      });
+      const result = await startLoading(
+        createReservation({
+          roomId: selectedRoomId,
+          date,
+          start,
+          end,
+          attendees,
+          equipment,
+        })
+      );
 
       if ('ok' in result && result.ok) {
+        refetchReservations();
+        refetchMyReservations();
         navigate('/', { state: { message: '예약이 완료되었습니다!' } });
         return;
       }
@@ -118,7 +119,7 @@ export function RoomBookingPage() {
       setErrorMessage(serverMessage);
       setParams({ selectedRoomId: '' });
     }
-  };
+  }
 
   return (
     <div
@@ -187,16 +188,7 @@ export function RoomBookingPage() {
       <Spacing size={24} />
 
       {/* 예약 조건 입력 */}
-      <div
-        css={css`
-          padding: 0 24px;
-        `}
-      >
-        <Text typography="t5" fontWeight="bold" color={colors.grey900}>
-          예약 조건
-        </Text>
-        <Spacing size={16} />
-
+      <Section title="예약 조건">
         {/* 날짜 */}
         <div
           css={css`
@@ -258,9 +250,9 @@ export function RoomBookingPage() {
               시작 시간
             </Text>
             <Select
-              value={startTime}
+              value={start}
               onChange={e => {
-                setParams({ startTime: e.target.value });
+                setParams({ start: e.target.value });
                 handleFilterChange();
               }}
               aria-label="시작 시간"
@@ -285,9 +277,9 @@ export function RoomBookingPage() {
               종료 시간
             </Text>
             <Select
-              value={endTime}
+              value={end}
               onChange={e => {
-                setParams({ endTime: e.target.value });
+                setParams({ end: e.target.value });
                 handleFilterChange();
               }}
               aria-label="종료 시간"
@@ -397,9 +389,9 @@ export function RoomBookingPage() {
             {ALL_EQUIPMENT.map(eq => {
               const selected = equipment.includes(eq);
               return (
-                <button
+                <Chip
                   key={eq}
-                  type="button"
+                  selected={selected}
                   onClick={() => {
                     const next = selected ? equipment.filter(e => e !== eq) : [...equipment, eq];
                     setParams({ equipment: next });
@@ -407,149 +399,48 @@ export function RoomBookingPage() {
                   }}
                   aria-label={EQUIPMENT_LABELS[eq]}
                   aria-pressed={selected}
-                  css={css`
-                    padding: 8px 16px;
-                    border-radius: 20px;
-                    border: 1px solid ${selected ? colors.blue500 : colors.grey200};
-                    background: ${selected ? colors.blue50 : colors.grey50};
-                    color: ${selected ? colors.blue600 : colors.grey700};
-                    font-size: 14px;
-                    font-weight: 500;
-                    cursor: pointer;
-                    transition: all 0.15s;
-                    &:hover {
-                      border-color: ${selected ? colors.blue500 : colors.grey400};
-                    }
-                  `}
                 >
                   {EQUIPMENT_LABELS[eq]}
-                </button>
+                </Chip>
               );
             })}
           </div>
         </div>
-      </div>
+      </Section>
 
-      {validationError && (
-        <div
-          css={css`
-            padding: 0 24px;
-          `}
-        >
-          <Spacing size={8} />
-          <span
-            css={css`
-              color: ${colors.red500};
-              font-size: 14px;
-            `}
-            role="alert"
-          >
-            {validationError}
-          </span>
-        </div>
-      )}
+      <Spacing size={16} />
 
-      <Spacing size={24} />
+      {validationError && <Banner variant="error">{validationError}</Banner>}
+
+      <Spacing size={8} />
       <Border size={8} />
       <Spacing size={24} />
 
       {/* 예약 가능 회의실 목록 */}
       {isFilterComplete && (
-        <div
-          css={css`
-            padding: 0 24px;
-          `}
-        >
-          <div
-            css={css`
-              display: flex;
-              align-items: baseline;
-              gap: 6px;
-            `}
-          >
-            <Text typography="t5" fontWeight="bold" color={colors.grey900}>
-              예약 가능 회의실
-            </Text>
-            <Text typography="t7" fontWeight="medium" color={colors.grey500}>
-              {availableRooms.length}개
-            </Text>
-          </div>
+        <Section title="예약 가능 회의실" subtitle={`${availableRooms.length}개`}>
+          <AvailableRooms
+            availableRooms={availableRooms}
+            EmptyComponent={
+              <div
+                css={css`
+                  padding: 40px 0;
+                  text-align: center;
+                  background: ${colors.grey50};
+                  border-radius: 14px;
+                `}
+              >
+                <Text typography="t6" color={colors.grey500}>
+                  조건에 맞는 회의실이 없습니다.
+                </Text>
+              </div>
+            }
+          />
           <Spacing size={16} />
-
-          {availableRooms.length === 0 ? (
-            <div
-              css={css`
-                padding: 40px 0;
-                text-align: center;
-                background: ${colors.grey50};
-                border-radius: 14px;
-              `}
-            >
-              <Text typography="t6" color={colors.grey500}>
-                조건에 맞는 회의실이 없습니다.
-              </Text>
-            </div>
-          ) : (
-            <div
-              css={css`
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-              `}
-            >
-              {availableRooms.map(
-                (room: { id: string; name: string; floor: number; capacity: number; equipment: string[] }) => {
-                  const isSelected = selectedRoomId === room.id;
-                  return (
-                    <div
-                      key={room.id}
-                      onClick={() => setParams({ selectedRoomId: room.id })}
-                      role="button"
-                      aria-pressed={isSelected}
-                      aria-label={room.name}
-                      css={css`
-                        cursor: pointer;
-                        padding: 14px 16px;
-                        border-radius: 14px;
-                        border: 2px solid ${isSelected ? colors.blue500 : colors.grey200};
-                        background: ${isSelected ? colors.blue50 : colors.white};
-                        transition: all 0.15s;
-                        &:hover {
-                          border-color: ${isSelected ? colors.blue500 : colors.grey300};
-                        }
-                      `}
-                    >
-                      <ListRow
-                        contents={
-                          <ListRow.Text2Rows
-                            top={room.name}
-                            topProps={{ typography: 't6', fontWeight: 'bold', color: colors.grey900 }}
-                            bottom={`${room.floor}층 · ${room.capacity}명 · ${room.equipment
-                              .map((e: string) => EQUIPMENT_LABELS[e])
-                              .join(', ')}`}
-                            bottomProps={{ typography: 't7', color: colors.grey600 }}
-                          />
-                        }
-                        right={
-                          isSelected ? (
-                            <Text typography="t7" fontWeight="bold" color={colors.blue500}>
-                              선택됨
-                            </Text>
-                          ) : undefined
-                        }
-                      />
-                    </div>
-                  );
-                }
-              )}
-            </div>
-          )}
-
-          <Spacing size={16} />
-          <Button display="full" onClick={handleBook} disabled={createMutation.isLoading}>
-            {createMutation.isLoading ? '예약 중...' : '확정'}
+          <Button display="full" onClick={handleBook} disabled={isLoading}>
+            {isLoading ? '예약 중...' : '확정'}
           </Button>
-        </div>
+        </Section>
       )}
 
       <Spacing size={24} />

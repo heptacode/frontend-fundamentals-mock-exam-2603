@@ -81,6 +81,7 @@ function Text<Element extends keyof JSX.IntrinsicElements = 'span'>(props: TextP
     ...rest
   } = props as TextProps;
 
+
   const isSingleLine = ellipsisAfterLines !== undefined && ellipsisAfterLines === 1;
   const isMultiLine = ellipsisAfterLines !== undefined && ellipsisAfterLines > 1;
 
