@@ -10,7 +10,7 @@ interface SectionProps {
 
 export function Section({ title, subtitle, children }: SectionProps) {
   return (
-    <div
+    <section
       css={css`
         padding: 0 24px;
       `}
@@ -29,6 +29,6 @@ export function Section({ title, subtitle, children }: SectionProps) {
       </div>
       <Spacing size={16} />
       {children}
-    </div>
+    </section>
   );
 }

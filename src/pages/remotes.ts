@@ -7,20 +7,21 @@ export function getRooms() {
 }
 getRooms.apiPath = () => '/api/rooms';
 getRooms.queryOptions = () =>
-  ({
-    queryKey: [getRooms.apiPath()],
-    queryFn: getRooms,
-  } satisfies UseQueryOptions<Room[]>);
+({
+  queryKey: [getRooms.apiPath()],
+  queryFn: getRooms,
+} satisfies UseQueryOptions<Room[]>);
 
 export function getReservations(date: string) {
   return http.get<Reservation[]>(getReservations.apiPath(date));
 }
 getReservations.apiPath = (date: string) => `/api/reservations?date=${date}`;
 getReservations.queryOptions = (date: string) =>
-  ({
-    queryKey: [getReservations.apiPath(date)],
-    queryFn: () => getReservations(date),
-  } satisfies UseQueryOptions<Reservation[]>);
+({
+  queryKey: [getReservations.apiPath(date)],
+  queryFn: () => getReservations(date),
+  enabled: !!date,
+} satisfies UseQueryOptions<Reservation[]>);
 
 export function createReservation(data: Omit<Reservation, 'id'>) {
   return http.post<typeof data, { ok: boolean; reservation?: unknown; code?: string; message?: string }>(
@@ -34,10 +35,10 @@ export function getMyReservations() {
 }
 getMyReservations.apiPath = () => '/api/my-reservations';
 getMyReservations.queryOptions = () =>
-  ({
-    queryKey: [getMyReservations.apiPath()],
-    queryFn: getMyReservations,
-  } satisfies UseQueryOptions<Reservation[]>);
+({
+  queryKey: [getMyReservations.apiPath()],
+  queryFn: getMyReservations,
+} satisfies UseQueryOptions<Reservation[]>);
 
 export function cancelReservation(id: string) {
   return http.delete<{ ok: boolean }>(`/api/reservations/${id}`);
