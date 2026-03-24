@@ -8,14 +8,7 @@ import { ALL_EQUIPMENT, EQUIPMENT_LABELS, TIME_SLOTS } from 'utils/constants';
 import { createReservation, getMyReservations, getReservations, getRooms } from 'pages/remotes';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  ArrayParam,
-  createEnumArrayParam,
-  NumberParam,
-  StringParam,
-  useQueryParams,
-  withDefault,
-} from 'use-query-params';
+import { createEnumArrayParam, NumberParam, StringParam, useQueryParams, withDefault } from 'use-query-params';
 import { formatDate } from 'utils/date';
 import { useLoading } from 'hooks/useLoading';
 import { Section } from 'components/Section';
@@ -23,6 +16,9 @@ import { Banner } from 'components/Banner';
 import { filterAvailableRooms, getUniqueFloors } from 'utils/roomFilters';
 import { AvailableRooms } from './AvailableRooms';
 import { Chip } from 'components/Chip';
+import { DateInput } from 'components/DateInput';
+import { Flex } from 'components/Flex';
+import { NumberInput } from 'components/NumberInput';
 
 export function RoomBookingPage() {
   const navigate = useNavigate();
@@ -162,27 +158,9 @@ export function RoomBookingPage() {
       </Top.Top03>
 
       {errorMessage && (
-        <div
-          css={css`
-            padding: 0 24px;
-          `}
-        >
-          <Spacing size={12} />
-          <div
-            css={css`
-              padding: 10px 14px;
-              border-radius: 10px;
-              background: ${colors.red50};
-              display: flex;
-              align-items: center;
-              gap: 8px;
-            `}
-          >
-            <Text typography="t7" fontWeight="medium" color={colors.red500}>
-              {errorMessage}
-            </Text>
-          </div>
-        </div>
+        <Banner variant="error" css={{ margin: '12px 0' }}>
+          {errorMessage}
+        </Banner>
       )}
 
       <Spacing size={24} />
@@ -190,45 +168,19 @@ export function RoomBookingPage() {
       {/* 예약 조건 입력 */}
       <Section title="예약 조건">
         {/* 날짜 */}
-        <div
-          css={css`
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-          `}
-        >
+        <Flex gap="6px" flexDirection="column">
           <Text as="label" typography="t7" fontWeight="medium" color={colors.grey600}>
             날짜
           </Text>
-          <input
-            type="date"
+          <DateInput
             value={date}
-            min={formatDate(new Date())}
+            // min={formatDate(new Date())}
             onChange={e => {
               setParams({ date: e.target.value });
               handleFilterChange();
             }}
-            aria-label="날짜"
-            css={css`
-              box-sizing: border-box;
-              font-size: 16px;
-              font-weight: 500;
-              line-height: 1.5;
-              height: 48px;
-              background-color: ${colors.grey50};
-              border-radius: 12px;
-              color: ${colors.grey800};
-              width: 100%;
-              border: 1px solid ${colors.grey200};
-              padding: 0 16px;
-              outline: none;
-              transition: border-color 0.15s;
-              &:focus {
-                border-color: ${colors.blue500};
-              }
-            `}
           />
-        </div>
+        </Flex>
         <Spacing size={14} />
 
         {/* 시간 */}
@@ -265,14 +217,7 @@ export function RoomBookingPage() {
               ))}
             </Select>
           </div>
-          <div
-            css={css`
-              display: flex;
-              flex-direction: column;
-              gap: 6px;
-              flex: 1;
-            `}
-          >
+          <Flex gap={12} flexDirection="column" flex={1}>
             <Text as="label" typography="t7" fontWeight="medium" color={colors.grey600}>
               종료 시간
             </Text>
@@ -291,65 +236,26 @@ export function RoomBookingPage() {
                 </option>
               ))}
             </Select>
-          </div>
+          </Flex>
         </div>
         <Spacing size={14} />
 
         {/* 참석 인원 + 선호 층 */}
-        <div
-          css={css`
-            display: flex;
-            gap: 12px;
-          `}
-        >
-          <div
-            css={css`
-              display: flex;
-              flex-direction: column;
-              gap: 6px;
-              flex: 1;
-            `}
-          >
+        <Flex gap="12px">
+          <Flex gap="6px" flexDirection="column" flex={1}>
             <Text as="label" typography="t7" fontWeight="medium" color={colors.grey600}>
               참석 인원
             </Text>
-            <input
-              type="number"
-              min={1}
+            <NumberInput
               value={attendees}
               onChange={e => {
                 setParams({ attendees: Math.max(1, Number(e.target.value)) });
                 handleFilterChange();
               }}
               aria-label="참석 인원"
-              css={css`
-                box-sizing: border-box;
-                font-size: 16px;
-                font-weight: 500;
-                line-height: 1.5;
-                height: 48px;
-                background-color: ${colors.grey50};
-                border-radius: 12px;
-                color: ${colors.grey800};
-                width: 100%;
-                border: 1px solid ${colors.grey200};
-                padding: 0 16px;
-                outline: none;
-                transition: border-color 0.15s;
-                &:focus {
-                  border-color: ${colors.blue500};
-                }
-              `}
             />
-          </div>
-          <div
-            css={css`
-              display: flex;
-              flex-direction: column;
-              gap: 6px;
-              flex: 1;
-            `}
-          >
+          </Flex>
+          <Flex gap="6px" flexDirection="column" flex={1}>
             <Text as="label" typography="t7" fontWeight="medium" color={colors.grey600}>
               선호 층
             </Text>
@@ -369,8 +275,8 @@ export function RoomBookingPage() {
                 </option>
               ))}
             </Select>
-          </div>
-        </div>
+          </Flex>
+        </Flex>
         <Spacing size={14} />
 
         {/* 장비 */}
@@ -379,13 +285,7 @@ export function RoomBookingPage() {
             필요 장비
           </Text>
           <Spacing size={8} />
-          <div
-            css={css`
-              display: flex;
-              gap: 8px;
-              flex-wrap: wrap;
-            `}
-          >
+          <Flex gap={8} flexWrap="wrap">
             {ALL_EQUIPMENT.map(eq => {
               const selected = equipment.includes(eq);
               return (
@@ -404,7 +304,7 @@ export function RoomBookingPage() {
                 </Chip>
               );
             })}
-          </div>
+          </Flex>
         </div>
       </Section>
 
@@ -421,7 +321,7 @@ export function RoomBookingPage() {
         <Section title="예약 가능 회의실" subtitle={`${availableRooms.length}개`}>
           <AvailableRooms
             availableRooms={availableRooms}
-            EmptyComponent={
+            placeholder={
               <div
                 css={css`
                   padding: 40px 0;

@@ -2,14 +2,15 @@ import { css } from '@emotion/react';
 import { ListRow, Text } from '_tosslib/components';
 import { colors } from '_tosslib/constants/colors';
 import { Room } from '_tosslib/server/types';
+import { Flex } from 'components/Flex';
 import { StringParam, useQueryParam, withDefault } from 'use-query-params';
 import { EQUIPMENT_LABELS } from 'utils/constants';
 
 export function AvailableRooms({
-  EmptyComponent,
+  placeholder,
   availableRooms,
 }: {
-  EmptyComponent: React.ReactNode;
+  placeholder?: React.ReactNode;
   availableRooms: Room[];
 }) {
   const [selectedRoomId, setSelectedRoomId] = useQueryParam<string>('selectedRoomId', withDefault(StringParam, ''));
@@ -17,15 +18,9 @@ export function AvailableRooms({
   return (
     <>
       {availableRooms.length === 0 ? (
-        EmptyComponent
+        placeholder
       ) : (
-        <div
-          css={css`
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-          `}
-        >
+        <Flex gap="10px" flexDirection="column">
           {availableRooms.map(room => {
             const isSelected = selectedRoomId === room.id;
 
@@ -70,7 +65,7 @@ export function AvailableRooms({
               </div>
             );
           })}
-        </div>
+        </Flex>
       )}
     </>
   );

@@ -1,39 +1,28 @@
 import { css } from '@emotion/react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Border, Button, ListRow, Spacing, Text, Top } from '_tosslib/components';
+import { useQuery } from '@tanstack/react-query';
+import { Border, Button, Spacing, Text, Top } from '_tosslib/components';
 import { colors } from '_tosslib/constants/colors';
 import { Reservation } from '_tosslib/server/types';
 import { DateInput } from 'components/DateInput';
 import { Section } from 'components/Section';
-import { cancelReservation, getMyReservations, getReservations, getRooms } from 'pages/remotes';
-import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { cancelReservation, getMyReservations, getReservations } from 'pages/remotes';
+import { useNavigate } from 'react-router-dom';
 import { StringParam, useQueryParam, withDefault } from 'use-query-params';
 import { MyReservations } from './MyReservations';
 import { useLoading } from 'hooks/useLoading';
 import { Banner } from 'components/Banner';
 import { formatDate } from 'utils/date';
 import { ReservationTimeline } from './ReservationTimeline';
+import { useLocationStateMessage } from 'hooks/useLocationStateMessage';
 
 export function ReservationStatusPage() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [isLoading, startLoading] = useLoading();
   const [date, setDate] = useQueryParam('date', withDefault(StringParam, formatDate(new Date())));
 
   const { refetch: refetchReservations } = useQuery(getReservations.queryOptions(date));
   const { data: myReservationList = [], refetch: refetchMyReservations } = useQuery(getMyReservations.queryOptions());
-
-  const locationState = location.state as { message?: string } | null;
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
-    locationState?.message ? { type: 'success', text: locationState.message } : null
-  );
-
-  useEffect(() => {
-    if (locationState?.message) {
-      window.history.replaceState({}, '');
-    }
-  }, [locationState]);
+  const [message, setMessage] = useLocationStateMessage();
 
   return (
     <div
@@ -88,7 +77,7 @@ export function ReservationStatusPage() {
         }
       >
         <MyReservations
-          EmptyComponent={
+          placeholder={
             <div
               css={css`
                 padding: 40px 0;

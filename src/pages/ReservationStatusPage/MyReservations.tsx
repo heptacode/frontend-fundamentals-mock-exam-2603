@@ -3,15 +3,16 @@ import { useQuery } from '@tanstack/react-query';
 import { ListRow } from '_tosslib/components';
 import { colors } from '_tosslib/constants/colors';
 import { Reservation } from '_tosslib/server/types';
+import { Flex } from 'components/Flex';
 import { getMyReservations, getRooms } from 'pages/remotes';
 import { EQUIPMENT_LABELS } from 'utils/constants';
 
 export function MyReservations({
-  EmptyComponent,
+  placeholder,
   renderRight,
 }: {
-  EmptyComponent: React.ReactNode;
-  renderRight: (reservation: Reservation) => React.ReactNode;
+  placeholder?: React.ReactNode;
+  renderRight?: (reservation: Reservation) => React.ReactNode;
 }) {
   const { data: rooms = [] } = useQuery(getRooms.queryOptions());
   const { data: myReservations = [] } = useQuery(getMyReservations.queryOptions());
@@ -23,15 +24,9 @@ export function MyReservations({
   return (
     <>
       {myReservations.length === 0 ? (
-        EmptyComponent
+        placeholder
       ) : (
-        <div
-          css={css`
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-          `}
-        >
+        <Flex gap="10px" flexDirection="column">
           {myReservations.map(reservation => (
             <div
               key={reservation.id}
@@ -49,15 +44,15 @@ export function MyReservations({
                     topProps={{ typography: 't6', fontWeight: 'bold', color: colors.grey900 }}
                     bottom={`${reservation.date} ${reservation.start}~${reservation.end} · ${
                       reservation.attendees
-                    }명 · ${reservation.equipment.map((e: string) => EQUIPMENT_LABELS[e]).join(', ') || '장비 없음'}`}
+                    }명 · ${reservation.equipment.map(e => EQUIPMENT_LABELS[e]).join(', ') || '장비 없음'}`}
                     bottomProps={{ typography: 't7', color: colors.grey600 }}
                   />
                 }
-                right={renderRight(reservation)}
+                right={renderRight?.(reservation)}
               />
             </div>
           ))}
-        </div>
+        </Flex>
       )}
     </>
   );

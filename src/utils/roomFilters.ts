@@ -11,6 +11,26 @@ export function getUniqueFloors(rooms: Room[]): number[] {
   return [...new Set(rooms.map(r => r.floor))].sort((a, b) => a - b);
 }
 
+function hasCapacity(room: Room, attendees: number): boolean {
+  return room.capacity >= attendees;
+}
+
+function hasRequiredEquipment(room: Room, equipment: Equipment[]): boolean {
+  return equipment.every(eq => eq && room.equipment.includes(eq));
+}
+
+function isOnPreferredFloor(room: Room, preferredFloor: number | null): boolean {
+  return preferredFloor === null || room.floor === preferredFloor;
+}
+
+function hasNoConflict(room: Room, reservations: Reservation[], date: Reservation['date'], start: Reservation['start'], end: Reservation['end']): boolean {
+  return !reservations.some(r => r.roomId === room.id && r.date === date && r.start < end && r.end > start);
+}
+
+function compareByFloorThenName(a: Room, b: Room): number {
+  return a.floor - b.floor || a.name.localeCompare(b.name);
+}
+
 /**
  * 조건에 맞는 예약 가능한 회의실을 필터링하고 정렬하여 반환합니다.
  */
@@ -18,27 +38,11 @@ export function filterAvailableRooms(rooms: Room[], reservations: Reservation[],
   const { attendees, equipment, preferredFloor, date, start, end } = options;
 
   return rooms
-    .filter(room => {
-      // 수용 인원 체크
-      if (room.capacity < attendees) return false;
-
-      // 필요 장비 체크
-      if (!equipment.every(eq => eq && room.equipment.includes(eq))) return false;
-
-      // 선호 층 체크
-      if (preferredFloor !== null && room.floor !== preferredFloor) return false;
-
-      // 예약 충돌 체크
-      const hasConflict = reservations.some(
-        r => r.roomId === room.id && r.date === date && r.start < end && r.end > start
-      );
-      if (hasConflict) return false;
-
-      return true;
-    })
-    .sort((a, b) => {
-      // 층 우선 정렬, 같은 층이면 이름 순
-      if (a.floor !== b.floor) return a.floor - b.floor;
-      return a.name.localeCompare(b.name);
-    });
+    .filter(room =>
+      hasCapacity(room, attendees) &&
+      hasRequiredEquipment(room, equipment) &&
+      isOnPreferredFloor(room, preferredFloor) &&
+      hasNoConflict(room, reservations, date, start, end)
+    )
+    .sort(compareByFloorThenName);
 }
